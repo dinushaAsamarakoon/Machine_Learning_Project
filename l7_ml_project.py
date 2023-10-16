@@ -1,1 +1,558 @@
-{"metadata":{"kernelspec":{"language":"python","display_name":"Python 3","name":"python3"},"language_info":{"pygments_lexer":"ipython3","nbconvert_exporter":"python","version":"3.6.4","file_extension":".py","codemirror_mode":{"name":"ipython","version":3},"name":"python","mimetype":"text/x-python"}},"nbformat_minor":4,"nbformat":4,"cells":[{"cell_type":"code","source":"# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:14:54.409305Z\",\"iopub.status.busy\":\"2023-09-23T17:14:54.408891Z\",\"iopub.status.idle\":\"2023-09-23T17:14:57.945669Z\",\"shell.execute_reply\":\"2023-09-23T17:14:57.944662Z\"},\"id\":\"zMToJ4ehZdB5\",\"papermill\":{\"duration\":3.590697,\"end_time\":\"2023-09-23T17:14:57.948239\",\"exception\":false,\"start_time\":\"2023-09-23T17:14:54.357542\",\"status\":\"completed\"},\"tags\":[]}\nimport pandas as pd\nimport numpy as np\nimport matplotlib.pyplot as plt\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.neighbors import KNeighborsClassifier\nfrom catboost import CatBoostClassifier\nfrom sklearn.model_selection import cross_val_score\nfrom sklearn.metrics import accuracy_score\nfrom sklearn.decomposition import PCA\nimport seaborn as sn\nfrom imblearn.over_sampling import RandomOverSampler\nfrom sklearn.svm import SVC\nfrom sklearn.linear_model import LogisticRegression\nimport time\nimport os\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:14:58.011517Z\",\"iopub.status.busy\":\"2023-09-23T17:14:58.011066Z\",\"iopub.status.idle\":\"2023-09-23T17:14:58.015955Z\",\"shell.execute_reply\":\"2023-09-23T17:14:58.014858Z\"},\"id\":\"yLM0TKNVZgDY\",\"papermill\":{\"duration\":0.040052,\"end_time\":\"2023-09-23T17:14:58.018186\",\"exception\":false,\"start_time\":\"2023-09-23T17:14:57.978134\",\"status\":\"completed\"},\"tags\":[]}\nimport warnings\nwarnings.filterwarnings('ignore')\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:14:58.075854Z\",\"iopub.status.busy\":\"2023-09-23T17:14:58.075551Z\",\"iopub.status.idle\":\"2023-09-23T17:15:08.707650Z\",\"shell.execute_reply\":\"2023-09-23T17:15:08.706566Z\"},\"id\":\"BZ6lcmNJZh9w\",\"papermill\":{\"duration\":10.663847,\"end_time\":\"2023-09-23T17:15:08.710392\",\"exception\":false,\"start_time\":\"2023-09-23T17:14:58.046545\",\"status\":\"completed\"},\"tags\":[]}\ntrain = pd.read_csv('/kaggle/input/l7-data/train.csv')\nvalid = pd.read_csv('/kaggle/input/l7-data/valid.csv')\ntest = pd.read_csv('/kaggle/input/l7-data/test.csv')\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:15:08.772809Z\",\"iopub.status.busy\":\"2023-09-23T17:15:08.772473Z\",\"iopub.status.idle\":\"2023-09-23T17:15:08.811384Z\",\"shell.execute_reply\":\"2023-09-23T17:15:08.810183Z\"},\"id\":\"fRfytVM6ystx\",\"outputId\":\"a9bf966f-5eeb-4551-f97b-8eaa6f714651\",\"papermill\":{\"duration\":0.074064,\"end_time\":\"2023-09-23T17:15:08.814641\",\"exception\":false,\"start_time\":\"2023-09-23T17:15:08.740577\",\"status\":\"completed\"},\"tags\":[]}\ntrain.head()\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:15:08.918973Z\",\"iopub.status.busy\":\"2023-09-23T17:15:08.918595Z\",\"iopub.status.idle\":\"2023-09-23T17:15:08.923820Z\",\"shell.execute_reply\":\"2023-09-23T17:15:08.922923Z\"},\"id\":\"XsT635ZGaZPY\",\"papermill\":{\"duration\":0.037418,\"end_time\":\"2023-09-23T17:15:08.926039\",\"exception\":false,\"start_time\":\"2023-09-23T17:15:08.888621\",\"status\":\"completed\"},\"tags\":[]}\nsvm = SVC(kernel='linear')\ndef svm_classifier(X_train, Y_train, X_val, Y_val):\n    svm.fit(X_train, Y_train)\n\n    y_pred = svm.predict(X_val)\n\n    accuracy = accuracy_score(Y_val, y_pred)\n    return accuracy\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:15:08.986025Z\",\"iopub.status.busy\":\"2023-09-23T17:15:08.985728Z\",\"iopub.status.idle\":\"2023-09-23T17:15:08.990958Z\",\"shell.execute_reply\":\"2023-09-23T17:15:08.990028Z\"},\"id\":\"DhEqpWj_bHAh\",\"papermill\":{\"duration\":0.036681,\"end_time\":\"2023-09-23T17:15:08.993265\",\"exception\":false,\"start_time\":\"2023-09-23T17:15:08.956584\",\"status\":\"completed\"},\"tags\":[]}\nknn = KNeighborsClassifier(n_neighbors=1)\ndef knn_classifier(X_train, Y_train, X_val, Y_val):\n\n    knn.fit(np.array(X_train), Y_train)\n\n    y_pred = knn.predict(np.array(X_val))\n\n    accuracy = accuracy_score(Y_val, y_pred)\n    return accuracy\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:15:09.052989Z\",\"iopub.status.busy\":\"2023-09-23T17:15:09.052673Z\",\"iopub.status.idle\":\"2023-09-23T17:15:09.057723Z\",\"shell.execute_reply\":\"2023-09-23T17:15:09.056774Z\"},\"id\":\"frqdix6CbMwv\",\"papermill\":{\"duration\":0.036625,\"end_time\":\"2023-09-23T17:15:09.059890\",\"exception\":false,\"start_time\":\"2023-09-23T17:15:09.023265\",\"status\":\"completed\"},\"tags\":[]}\nlogreg = LogisticRegression()\ndef logistic_regression_classifier(X_train, Y_train, X_val, Y_val):\n\n    logreg.fit(X_train, Y_train)\n\n    y_pred = logreg.predict(X_val)\n\n    accuracy = accuracy_score(Y_val, y_pred)\n    return accuracy\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:15:09.117161Z\",\"iopub.status.busy\":\"2023-09-23T17:15:09.116840Z\",\"iopub.status.idle\":\"2023-09-23T17:15:09.122465Z\",\"shell.execute_reply\":\"2023-09-23T17:15:09.121453Z\"},\"id\":\"LXCloJWmwJaw\",\"papermill\":{\"duration\":0.03699,\"end_time\":\"2023-09-23T17:15:09.124900\",\"exception\":false,\"start_time\":\"2023-09-23T17:15:09.087910\",\"status\":\"completed\"},\"tags\":[]}\ndef id_highly_correlated_features(dataset, threshold):\n    corr_matrix = dataset.corr().abs()\n    upper_tri = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool_))\n    to_drop = [column for column in upper_tri.columns if any(upper_tri[column] > threshold)]\n    return set(to_drop)\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:15:09.182468Z\",\"iopub.status.busy\":\"2023-09-23T17:15:09.182194Z\",\"iopub.status.idle\":\"2023-09-23T17:15:09.188483Z\",\"shell.execute_reply\":\"2023-09-23T17:15:09.187433Z\"},\"id\":\"OgQ1BFmdwNkX\",\"papermill\":{\"duration\":0.037244,\"end_time\":\"2023-09-23T17:15:09.191085\",\"exception\":false,\"start_time\":\"2023-09-23T17:15:09.153841\",\"status\":\"completed\"},\"tags\":[]}\ndef id_weekly_correlated_features_with_label(dataset, label, threshold = 0.01):\n    for label_ in train.iloc[:, -4:]:\n        if label_ != label:\n            dataset = dataset.drop(label_, axis=1)  # remove other targets from the dataset\n    corr_matrix = dataset.corr().abs()\n    weak_corr_features = corr_matrix[corr_matrix[label] < threshold].index.tolist()\n    if label in weak_corr_features:\n        weak_corr_features.remove(label)\n    return weak_corr_features\n\n# %% [markdown] {\"id\":\"rvNmEQGLboCX\",\"papermill\":{\"duration\":0.02872,\"end_time\":\"2023-09-23T17:15:09.248585\",\"exception\":false,\"start_time\":\"2023-09-23T17:15:09.219865\",\"status\":\"completed\"},\"tags\":[]}\n# # **Label 1**\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:15:09.305577Z\",\"iopub.status.busy\":\"2023-09-23T17:15:09.305294Z\",\"iopub.status.idle\":\"2023-09-23T17:15:09.372835Z\",\"shell.execute_reply\":\"2023-09-23T17:15:09.371852Z\"},\"id\":\"CJagUoZuxUdG\",\"papermill\":{\"duration\":0.098745,\"end_time\":\"2023-09-23T17:15:09.375446\",\"exception\":false,\"start_time\":\"2023-09-23T17:15:09.276701\",\"status\":\"completed\"},\"tags\":[]}\nlabel_1_train = train.copy()\nlabel_1_valid = valid.copy()\nlabel_1_test = test.copy()\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:15:09.436688Z\",\"iopub.status.busy\":\"2023-09-23T17:15:09.435826Z\",\"iopub.status.idle\":\"2023-09-23T17:15:09.510950Z\",\"shell.execute_reply\":\"2023-09-23T17:15:09.509920Z\"},\"id\":\"QNbYH1DZw8zI\",\"papermill\":{\"duration\":0.107653,\"end_time\":\"2023-09-23T17:15:09.513668\",\"exception\":false,\"start_time\":\"2023-09-23T17:15:09.406015\",\"status\":\"completed\"},\"tags\":[]}\nlabel_1_train = label_1_train.dropna(subset=['label_1'])\nlabel_1_valid = label_1_valid.dropna(subset=['label_1'])\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:15:09.573066Z\",\"iopub.status.busy\":\"2023-09-23T17:15:09.572756Z\",\"iopub.status.idle\":\"2023-09-23T17:15:09.596913Z\",\"shell.execute_reply\":\"2023-09-23T17:15:09.595822Z\"},\"id\":\"PXIWTTixye3u\",\"outputId\":\"c20ef1f4-b561-41c4-e66f-7c919da8d795\",\"papermill\":{\"duration\":0.055923,\"end_time\":\"2023-09-23T17:15:09.599165\",\"exception\":false,\"start_time\":\"2023-09-23T17:15:09.543242\",\"status\":\"completed\"},\"tags\":[]}\nlabel_1_test.head()\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:15:09.658355Z\",\"iopub.status.busy\":\"2023-09-23T17:15:09.657571Z\",\"iopub.status.idle\":\"2023-09-23T17:15:09.717155Z\",\"shell.execute_reply\":\"2023-09-23T17:15:09.716121Z\"},\"id\":\"hJt-sLN9wjtb\",\"papermill\":{\"duration\":0.091058,\"end_time\":\"2023-09-23T17:15:09.719614\",\"exception\":false,\"start_time\":\"2023-09-23T17:15:09.628556\",\"status\":\"completed\"},\"tags\":[]}\nX_train = label_1_train.iloc[:, :-4]\ny_train = label_1_train.iloc[:, -4:]\nX_val = label_1_valid.iloc[:, :-4]\ny_val = label_1_valid.iloc[:, -4:]\nX_test = label_1_test.iloc[:, 1:]\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:15:09.782013Z\",\"iopub.status.busy\":\"2023-09-23T17:15:09.781635Z\",\"iopub.status.idle\":\"2023-09-23T17:15:10.510086Z\",\"shell.execute_reply\":\"2023-09-23T17:15:10.509110Z\"},\"id\":\"eBjtGtwvzPcD\",\"outputId\":\"804d0137-dd44-4259-c00e-33500e698fb1\",\"papermill\":{\"duration\":0.761371,\"end_time\":\"2023-09-23T17:15:10.512566\",\"exception\":false,\"start_time\":\"2023-09-23T17:15:09.751195\",\"status\":\"completed\"},\"tags\":[]}\nplt.figure(figsize=(18, 6))\nsn.countplot(data=y_train, x='label_1', palette='Set2')\nplt.title('Distribution of label_1 Classes')\nplt.xlabel('label_1')\nplt.ylabel('Count')\nplt.xticks(rotation=45)\nplt.show()\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:15:10.572602Z\",\"iopub.status.busy\":\"2023-09-23T17:15:10.571761Z\",\"iopub.status.idle\":\"2023-09-23T17:16:03.876807Z\",\"shell.execute_reply\":\"2023-09-23T17:16:03.875894Z\"},\"id\":\"uw63e_qSctT4\",\"outputId\":\"a8032453-7279-4abd-8216-9a91f21bea60\",\"papermill\":{\"duration\":53.367042,\"end_time\":\"2023-09-23T17:16:03.908791\",\"exception\":false,\"start_time\":\"2023-09-23T17:15:10.541749\",\"status\":\"completed\"},\"tags\":[]}\n# accuracy with all the features\n#svm\nstart_time = time.time()\naccuracy = svm_classifier(X_train, y_train['label_1'], X_val, y_val['label_1'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:16:03.968042Z\",\"iopub.status.busy\":\"2023-09-23T17:16:03.967701Z\",\"iopub.status.idle\":\"2023-09-23T17:16:04.945691Z\",\"shell.execute_reply\":\"2023-09-23T17:16:04.944467Z\"},\"id\":\"pJsxifjvb4Gp\",\"outputId\":\"c7ad7a2a-6909-49c2-9a0d-37691d8fee14\",\"papermill\":{\"duration\":1.010517,\"end_time\":\"2023-09-23T17:16:04.947809\",\"exception\":false,\"start_time\":\"2023-09-23T17:16:03.937292\",\"status\":\"completed\"},\"tags\":[]}\n# accuracy with all the features\n#knn\nstart_time = time.time()\naccuracy = knn_classifier(X_train, y_train['label_1'], X_val, y_val['label_1'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:16:05.007188Z\",\"iopub.status.busy\":\"2023-09-23T17:16:05.006735Z\",\"iopub.status.idle\":\"2023-09-23T17:16:43.733188Z\",\"shell.execute_reply\":\"2023-09-23T17:16:43.731880Z\"},\"id\":\"PMg0VNFQcrhX\",\"outputId\":\"b48c2299-b5d3-4c7c-d27b-cc824d7966a3\",\"papermill\":{\"duration\":38.866071,\"end_time\":\"2023-09-23T17:16:43.843204\",\"exception\":false,\"start_time\":\"2023-09-23T17:16:04.977133\",\"status\":\"completed\"},\"tags\":[]}\n# accuracy with all the features\n#logistic_regression_classifier\nstart_time = time.time()\naccuracy = logistic_regression_classifier(X_train, y_train['label_1'], X_val, y_val['label_1'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:16:43.913077Z\",\"iopub.status.busy\":\"2023-09-23T17:16:43.912716Z\",\"iopub.status.idle\":\"2023-09-23T17:16:50.753761Z\",\"shell.execute_reply\":\"2023-09-23T17:16:50.752608Z\"},\"id\":\"jpsWGDmHL2PN\",\"papermill\":{\"duration\":6.876221,\"end_time\":\"2023-09-23T17:16:50.756323\",\"exception\":false,\"start_time\":\"2023-09-23T17:16:43.880102\",\"status\":\"completed\"},\"tags\":[]}\nlabel_1_pred_before = svm.predict(np.array(X_test))\n\n# %% [code] {\"execution\":{\"iopub.execute_input\":\"2023-09-23T17:16:50.816498Z\",\"iopub.status.busy\":\"2023-09-23T17:16:50.816184Z\",\"iopub.status.idle\":\"2023-09-23T17:16:51.227733Z\",\"shell.execute_reply\":\"2023-09-23T17:16:51.226229Z\"},\"id\":\"TIanD8lKfKy_\",\"outputId\":\"413f4d1c-0bfc-4c99-beb9-9242ba83e371\",\"papermill\":{\"duration\":0.443786,\"end_time\":\"2023-09-23T17:16:51.230017\",\"exception\":true,\"start_time\":\"2023-09-23T17:16:50.786231\",\"status\":\"failed\"},\"tags\":[]}\nweekly_related_features = id_weekly_correlated_features_with_label(X_train_pca, 'label_1',0.01)\nlen(set(weekly_related_features))\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.134780Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.135246Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.135039Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.135016Z\"},\"id\":\"5qYRGAbpfS_2\",\"outputId\":\"ab84993c-806a-4db7-9c0f-2d95219a53a4\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nprint(f\"dropping weekly related features count {len(set(weekly_related_features))}\")\nX_train_filtered = X_train.drop(columns=list(weekly_related_features))\nX_val_filtered = X_val.drop(columns=list(weekly_related_features))\nX_test_filtered = X_test.drop(columns=list(weekly_related_features))\nstart_time = time.time()\naccuracy = svm_classifier(X_train_filtered, y_train['label_1'], X_val_filtered, y_val['label_1'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.136864Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.137330Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.137113Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.137091Z\"},\"id\":\"2tDYsxWr4GPn\",\"outputId\":\"09d9ec49-649e-4905-f9ab-d4847a8476ca\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nhighly_related_features = id_highly_correlated_features(X_train_filtered, 0.5)\nlen(set(highly_related_features))\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.138604Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.139497Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.139255Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.139223Z\"},\"id\":\"rCB9Hldr4ATT\",\"outputId\":\"614298dc-0868-4e8c-f7e0-d700a3496d14\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nprint(f\"dropping highly related features count {len(set(highly_related_features))}\")\nX_train_filtered = X_train_filtered.drop(columns=list(highly_related_features))\nX_val_filtered = X_val_filtered.drop(columns=list(highly_related_features))\nX_test_filtered = X_test_filtered.drop(columns=list(highly_related_features))\nstart_time = time.time()\naccuracy = svm_classifier(X_train_filtered, y_train['label_1'], X_val_filtered, y_val['label_1'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.141264Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.141808Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.141548Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.141525Z\"},\"id\":\"QR0lf6v4nkYG\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nscaler = StandardScaler()\nX_train_scaled = scaler.fit_transform(X_train_filtered)\nX_val_scaled = scaler.transform(X_val_filtered)\nX_test_scaled = scaler.transform(X_test_filtered)\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.143523Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.143982Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.143776Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.143755Z\"},\"id\":\"QgveuP1snttP\",\"outputId\":\"69554db8-c302-4aa5-906f-bf35391d2f49\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nstart_time = time.time()\naccuracy = svm_classifier(X_train_scaled, y_train['label_1'], X_val_scaled, y_val['label_1'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.145565Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.146150Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.145920Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.145898Z\"},\"id\":\"JH8TV-YvuqBp\",\"outputId\":\"f6d06c32-6c5a-473c-9da6-827d78549879\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train_scaled.shape\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.147501Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.148292Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.148078Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.148055Z\"},\"id\":\"NsvGCiJ4iuJ2\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\npca = PCA(n_components=0.95, svd_solver = 'full')\nX_train_pca = pca.fit_transform(X_train)\nX_val_pca = pca.transform(X_val)\nX_test_pca = pca.transform(X_test)\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.150059Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.150515Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.150301Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.150279Z\"},\"id\":\"p74xqqvhvS_M\",\"outputId\":\"55d04341-ac72-44d5-8c04-00fc0ef60eb0\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nstart_time = time.time()\naccuracy = svm_classifier(X_train_pca, y_train['label_1'], X_val_pca, y_val['label_1'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.151901Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.152698Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.152464Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.152438Z\"},\"id\":\"uIOx2vrmng8H\",\"outputId\":\"52683e60-59d4-4aac-a8e0-b8ccfddc7c7d\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train_pca.shape\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.154306Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.155422Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.155152Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.155121Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# # Hyper Parameter Tuning For SVC\n\n# from sklearn.model_selection import GridSearchCV\n  \n# # defining parameter range\n# param_grid = {'C': [0.1, 1, 10, 100, 1000], \n#               'gamma': [1, 0.1, 0.01, 0.001, 0.0001],\n#               'kernel': ['rbf']} \n  \n# grid = GridSearchCV(SVC(), param_grid, refit = True, verbose = 3)\n  \n# # fitting the model for grid search\n# grid.fit(X_train_pca, y_train['label_1'])\n# grid.best_params_\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.157077Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.157534Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.157317Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.157295Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# grid.best_estimator_\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.159280Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.159803Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.159575Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.159552Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\ncross_val_score(SVC(C=1000, gamma=0.001, kernel='rbf'), X_train_pca, y_train['label_1'], cv=3).mean()\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.161405Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.161885Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.161657Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.161636Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nbest_model_label_1 = SVC(C=1000, gamma=0.001, kernel='rbf', probability=True)\nbest_model_label_1.fit(X_train_pca, y_train['label_1'])\npred = best_model_label_1.predict(X_val_pca)\naccuracy_score(y_val['label_1'], pred )\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.163543Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.164012Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.163799Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.163776Z\"},\"id\":\"LtzImnGTLdOr\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nlabel_1_pred_after = best_model_label_1.predict(np.array(X_test_pca))\n\n# %% [markdown] {\"id\":\"GwFcUdxixFuQ\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# Label 2\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.165704Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.166149Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.165942Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.165920Z\"},\"id\":\"GtQisDnnxG5q\",\"outputId\":\"b70c86e9-8808-4b90-e615-d6568b3e50f3\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nlabel_2_train = train.copy()\nlabel_2_valid = valid.copy()\nlabel_2_test = test.copy()\nlabel_2_test.head()\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.167780Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.168234Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.168023Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.168000Z\"},\"id\":\"vSmw8-OBxLl1\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nlabel_2_train = label_2_train.dropna(subset=['label_2'])\nlabel_2_valid = label_2_valid.dropna(subset=['label_2'])\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.170050Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.170970Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.170748Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.170722Z\"},\"id\":\"7MwepTX7xNJ7\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train = label_2_train.iloc[:, :-4]\ny_train = label_2_train.iloc[:, -3:]\nX_val = label_2_valid.iloc[:, :-4]\ny_val = label_2_valid.iloc[:, -3:]\nX_test = label_2_test.iloc[:, 1:]\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.172399Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.172877Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.172653Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.172630Z\"},\"id\":\"aRm0rjoA4Kyp\",\"outputId\":\"60b9bd09-a054-457f-814b-72d8e1da3521\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_test.head()\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.174232Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.175006Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.174790Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.174768Z\"},\"id\":\"U2RC1kQOxWH1\",\"outputId\":\"b3e3e173-0333-4e2b-e824-b3898b0609b3\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nplt.figure(figsize=(18, 6))\nsn.histplot(data=y_train, x='label_2', bins=20, kde=False)\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.176628Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.177099Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.176890Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.176868Z\"},\"id\":\"rGfCOe1CxcDT\",\"outputId\":\"4a5343ed-db14-4ded-c55c-c00231a0c485\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# accuracy with all the features\n#svm\nstart_time = time.time()\naccuracy = svm_classifier(X_train, y_train['label_2'], X_val, y_val['label_2'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.178840Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.179338Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.179104Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.179081Z\"},\"id\":\"RrVpPv5RyBW2\",\"outputId\":\"574778c8-1cf1-4abe-d972-263b3958a570\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# accuracy with all the features\n#knn\nstart_time = time.time()\naccuracy = knn_classifier(X_train, y_train['label_2'], X_val, y_val['label_2'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.180986Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.181447Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.181228Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.181207Z\"},\"id\":\"A9vEqopkyHiv\",\"outputId\":\"84d8f7a7-7ef4-4597-f75c-0b5b44da7e4b\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# accuracy with all the features\n#logistic_regression_classifier\nstart_time = time.time()\naccuracy = logistic_regression_classifier(X_train, y_train['label_2'], X_val, y_val['label_2'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.182904Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.183927Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.183713Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.183675Z\"},\"id\":\"orTcWMo2OwCV\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nlabel_2_pred_before = svm.predict(np.array(X_test))\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.185247Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.185724Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.185495Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.185473Z\"},\"id\":\"wii0aQLpyPW8\",\"outputId\":\"86e5c0c2-1301-4637-af17-07affe0a16e1\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nweekly_related_features = id_weekly_correlated_features_with_label(label_2_train, 'label_2')\nprint(f\"dropping features count {len(set(weekly_related_features))}\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.187099Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.187925Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.187715Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.187674Z\"},\"id\":\"iM74bP3151Ll\",\"outputId\":\"97d6c80d-66fb-4180-daf4-2cb92071fe5f\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train_filtered = X_train.drop(columns=list(weekly_related_features))\nX_val_filtered = X_val.drop(columns=list(weekly_related_features))\nX_test_filtered = X_test.drop(columns=list(weekly_related_features))\nstart_time = time.time()\naccuracy = svm_classifier(X_train_filtered, y_train['label_2'], X_val_filtered, y_val['label_2'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.189651Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.190122Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.189910Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.189889Z\"},\"id\":\"tanCWQJo55Wc\",\"outputId\":\"d1d66f62-274e-4143-c201-8ec2566d6867\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nhighly_related_features = id_highly_correlated_features(X_train_filtered, 0.5)\nprint(f\"dropping features count {len(set(highly_related_features))}\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.191504Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.192286Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.192074Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.192051Z\"},\"id\":\"EHWI8Ca6564S\",\"outputId\":\"6cb936f1-7e8e-418d-98cc-c7ef5c015770\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train_filtered = X_train_filtered.drop(columns=list(highly_related_features))\nX_val_filtered = X_val_filtered.drop(columns=list(highly_related_features))\nX_test_filtered = X_test_filtered.drop(columns=list(highly_related_features))\nstart_time = time.time()\naccuracy = svm_classifier(X_train_filtered, y_train['label_2'], X_val_filtered, y_val['label_2'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.193967Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.194422Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.194213Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.194191Z\"},\"id\":\"9SdmZA88z4Sj\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nscaler = StandardScaler()\nX_train_scaled = scaler.fit_transform(X_train_filtered)\nX_val_scaled = scaler.transform(X_val_filtered)\nX_test_scaled = scaler.transform(X_test_filtered)\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.195881Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.196899Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.196668Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.196646Z\"},\"id\":\"MoeQYXQ10V2y\",\"outputId\":\"76381c3d-6bb3-4076-e856-61b9e11f8b89\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nstart_time = time.time()\naccuracy = svm_classifier(X_train_scaled, y_train['label_2'], X_val_scaled, y_val['label_2'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.198204Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.198725Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.198474Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.198449Z\"},\"id\":\"JQCSfwb30ZHP\",\"outputId\":\"1262cbda-08c3-4295-f660-1105d5f8b9a4\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train_scaled.shape\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.200610Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.201072Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.200865Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.200844Z\"},\"id\":\"IVf4MAx10c8G\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\npca = PCA(n_components=0.95, svd_solver = 'full')\nX_train_pca = pca.fit_transform(X_train_scaled)\nX_val_pca = pca.transform(X_val_scaled)\nX_test_pca = pca.transform(X_test_scaled)\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.202817Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.203264Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.203056Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.203035Z\"},\"id\":\"hwFx8lsv4qHd\",\"outputId\":\"affacf4d-73a1-4511-f211-a2117cfdc75d\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nstart_time = time.time()\naccuracy = svm_classifier(X_train_pca, y_train['label_2'], X_val_pca, y_val['label_2'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.204758Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.205655Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.205434Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.205400Z\"},\"id\":\"pHVjW7dQ45j7\",\"outputId\":\"82695d8f-6780-435e-8176-60fd0ee97036\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train_pca.shape\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.207118Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.207576Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.207359Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.207336Z\"},\"id\":\"vJaSLqpZ7o6-\",\"outputId\":\"4a9af7d0-f284-4f8d-cc49-64cf96872287\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_test_pca.shape\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.209293Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.209818Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.209594Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.209573Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# from sklearn.model_selection import GridSearchCV\n  \n# # defining parameter range\n# param_grid = {'C': [1000, 1200, 1300, 1500, 1600, 2000, 1800, 2200],\n#               'kernel': ['rbf']} \n  \n# grid = GridSearchCV(SVC(), param_grid, refit = True, verbose = 3)\n  \n# # fitting the model for grid search\n# grid.fit(X_train_pca, y_train['label_2'])\n# grid.best_params_\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.211695Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.212144Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.211936Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.211915Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\ncross_val_score(SVC(C=1000, kernel='rbf'), X_train_pca, y_train['label_2'], cv=5).mean()\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.213987Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.214441Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.214227Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.214206Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nbest_model_label_2 = SVC(C=1000, kernel='rbf')\nbest_model_label_2.fit(X_train_pca, y_train['label_2'])\npred = best_model_label_2.predict(X_val_pca)\naccuracy_score(y_val['label_2'], pred )\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.215862Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.216861Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.216627Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.216605Z\"},\"id\":\"xkphPt_NNVhE\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nlabel_2_pred_after = best_model_label_2.predict(np.array(X_test_pca))\n\n# %% [markdown] {\"id\":\"TydTj0m46IhP\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# Label 3\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.218350Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.218905Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.218648Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.218623Z\"},\"id\":\"wG3uMumaE2yX\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nlabel_3_train = train.copy()\nlabel_3_valid = valid.copy()\nlabel_3_test = test.copy()\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.220348Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.221237Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.221026Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.221001Z\"},\"id\":\"92vFvZzD-QiO\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nlabel_3_train = label_3_train.dropna(subset=['label_3'])\nlabel_3_valid = label_3_valid.dropna(subset=['label_3'])\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.222758Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.223202Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.223000Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.222978Z\"},\"id\":\"F_3iT0AW6KIQ\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train = label_3_train.iloc[:, :-4]\ny_train = label_3_train.iloc[:, -2:]\nX_val = label_3_valid.iloc[:, :-4]\ny_val = label_3_valid.iloc[:, -2:]\nX_test = label_3_test.iloc[:, 1:]\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.224400Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.225404Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.225190Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.225167Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nplt.figure(figsize=(18, 6))\nsn.histplot(data=y_train, x='label_3', bins=20, kde=False)\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.226890Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.227338Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.227131Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.227110Z\"},\"id\":\"ghG5Y5zC8ayf\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nros = RandomOverSampler(random_state=0, sampling_strategy=0.75)\nX_train_resampled, y_train_resampled = ros.fit_resample(X_train, y_train['label_3'])\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.229367Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.229903Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.229657Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.229634Z\"},\"id\":\"CQHKH9HS9EqV\",\"outputId\":\"54788c7b-9da0-4f49-bce9-ef7824235968\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\ny_train_resampled\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.231709Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.232180Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.231972Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.231951Z\"},\"id\":\"pF0BFRqG6qje\",\"outputId\":\"786a6fc8-680f-4772-9e6e-69be06652924\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nax = sn.countplot(x=y_train['label_3'])\n\nfor p in ax.patches:\n    ax.annotate(f'{p.get_height()}', (p.get_x() + p.get_width() / 2., p.get_height()),\n                ha='center', va='bottom', fontsize=9, color='black')\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.234186Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.234645Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.234435Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.234414Z\"},\"id\":\"Y1PVSyc86vlE\",\"outputId\":\"e0d0077b-cbba-4cd4-a0dd-fc4fe928fda6\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# accuracy with all the features\n#svm\nstart_time = time.time()\naccuracy = svm_classifier(X_train_resampled, y_train_resampled, X_val, y_val['label_3'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.236330Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.237407Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.237183Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.237161Z\"},\"id\":\"J7kg_NhO7AHg\",\"outputId\":\"291ba539-4614-46e7-f62d-07cd23926c4b\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# accuracy with all the features\n#knn\nstart_time = time.time()\naccuracy = knn_classifier(X_train_resampled, y_train_resampled, X_val, y_val['label_3'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.238772Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.239789Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.239540Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.239499Z\"},\"id\":\"R3DzhmGK7JBp\",\"outputId\":\"2d9137e8-9119-44e7-8bab-c7caa11ed50a\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# accuracy with all the features\n#logistic_regression_classifier\nstart_time = time.time()\naccuracy = logistic_regression_classifier(X_train_resampled, y_train_resampled, X_val, y_val['label_3'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.241316Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.241863Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.241604Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.241580Z\"},\"id\":\"wE5YmrCrP-fm\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nlabel_3_pred_before = svm.predict(np.array(X_test))\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.243974Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.244416Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.244210Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.244189Z\"},\"id\":\"G9Bk29R57N8k\",\"outputId\":\"97fd7bb6-bc0c-431a-f7d3-6c9f46901535\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nweekly_related_features = id_weekly_correlated_features_with_label(label_3_train, 'label_3',0.03)\nprint(f\"dropping features count {len(set(weekly_related_features))}\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.246354Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.246866Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.246631Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.246609Z\"},\"id\":\"5MF60qWp7G5F\",\"outputId\":\"5bf29894-d93d-432a-9aaf-f8a5e053dc56\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train_filtered = X_train_resampled.drop(columns=list(weekly_related_features))\nX_val_filtered = X_val.drop(columns=list(weekly_related_features))\nX_test_filtered = X_test.drop(columns=list(weekly_related_features))\nstart_time = time.time()\naccuracy = svm_classifier(X_train_filtered, y_train_resampled, X_val_filtered, y_val['label_3'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.248888Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.249415Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.249175Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.249150Z\"},\"id\":\"xli-qzci7Ltu\",\"outputId\":\"ac5b0cae-fc37-4413-fb67-1f58da095d77\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nhighly_related_features = id_highly_correlated_features(X_train_filtered, 0.5)\nprint(f\"dropping features count {len(set(highly_related_features))}\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.250954Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.251904Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.251654Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.251626Z\"},\"id\":\"oGv-i6ny-n0S\",\"outputId\":\"c05abb1c-4615-4da1-ebd0-d539600b6df6\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train_filtered = X_train_filtered.drop(columns=list(highly_related_features))\nX_val_filtered = X_val_filtered.drop(columns=list(highly_related_features))\nX_test_filtered = X_test_filtered.drop(columns=list(highly_related_features))\nstart_time = time.time()\naccuracy = svm_classifier(X_train_filtered, y_train_resampled, X_val_filtered, y_val['label_3'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.253463Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.253946Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.253730Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.253707Z\"},\"id\":\"pW3LeEPs7XoQ\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nscaler = StandardScaler()\nX_train_scaled = scaler.fit_transform(X_train_filtered)\nX_val_scaled = scaler.transform(X_val_filtered)\nX_test_scaled = scaler.transform(X_test_filtered)\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.255829Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.256279Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.256072Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.256050Z\"},\"id\":\"oUIiyBMr-ZuZ\",\"outputId\":\"d66e6ee4-539b-4c6c-fc47-4d9f06157368\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train_scaled.shape\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.257762Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.258718Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.258460Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.258406Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nstart_time = time.time()\naccuracy = svm_classifier(X_train_scaled, y_train_resampled, X_val_scaled, y_val['label_3'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.260296Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.260798Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.260558Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.260535Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\npca = PCA(n_components=0.95, svd_solver = 'full')\nX_train_pca = pca.fit_transform(X_train_scaled)\nX_val_pca = pca.transform(X_val_scaled)\nX_test_pca = pca.transform(X_test_scaled)\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.262751Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.263217Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.263013Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.262991Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nstart_time = time.time()\naccuracy = svm_classifier(X_train_pca, y_train_resampled, X_val_pca, y_val['label_3'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.265044Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.265501Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.265283Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.265262Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\ncross_val_score(SVC(), X_train_pca, y_train['label_3'], cv=5).mean()\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.267383Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.267887Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.267647Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.267624Z\"},\"id\":\"GHOnq9B4QHvN\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nbest_model_label_3 = SVC()\nlabel_3_pred_after = best_model_label_3.fit(X_train_pca, y_train['label_3']).predict(np.array(X_test_pca))\n\n# %% [markdown] {\"id\":\"AU2JK0lf-fwO\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# Label 4\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.270026Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.270505Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.270278Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.270257Z\"},\"id\":\"-8xrCT6xFEaw\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nlabel_4_train = train.copy()\nlabel_4_valid = valid.copy()\nlabel_4_test = test.copy()\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.272461Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.272926Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.272716Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.272693Z\"},\"id\":\"bvb63pxuDGeq\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nlabel_4_train = label_4_train.dropna(subset=['label_4'])\nlabel_4_valid = label_4_valid.dropna(subset=['label_4'])\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.274878Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.275347Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.275133Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.275111Z\"},\"id\":\"xp0L9mysEqYd\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train = label_4_train.iloc[:, :-4]\ny_train = label_4_train.iloc[:, -1:]\nX_val = label_4_valid.iloc[:, :-4]\ny_val = label_4_valid.iloc[:, -1:]\nX_test = label_4_test.iloc[:, 1:]\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.277367Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.277872Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.277614Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.277593Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nplt.figure(figsize=(18, 6))\nsn.histplot(data=y_train, x='label_4', bins=20, kde=False)\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.279929Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.280372Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.280164Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.280143Z\"},\"id\":\"Y6rfOPwG-gvs\",\"outputId\":\"7ffd7930-ccf4-49f7-db22-cebc61e35b09\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nplt.figure(figsize=(18, 6))\nax = sn.countplot(x=y_train['label_4'], color='teal')\n\nfor p in ax.patches:\n    ax.annotate(f'{p.get_height()}', (p.get_x() + p.get_width() / 2., p.get_height()),\n                ha='center', va='bottom', fontsize=9, color='black')\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.282290Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.282829Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.282570Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.282548Z\"},\"id\":\"G2TrwK0GDitH\",\"outputId\":\"aea44507-39fb-4bea-f345-450e7c22ac98\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# accuracy with all the features\n#knn\nstart_time = time.time()\naccuracy = knn_classifier(X_train, y_train, X_val, y_val['label_4'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.284781Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.285229Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.285021Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.285000Z\"},\"id\":\"Rr3klYleK6Ky\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nlabel_4_pred_before = knn.predict(np.array(X_test))\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.287271Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.287749Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.287519Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.287497Z\"},\"id\":\"7dYz2RLdAFu4\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nros = RandomOverSampler(random_state=0)\nX_train_resampled, y_train_resampled = ros.fit_resample(X_train, y_train['label_4'])\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.289449Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.290259Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.290017Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.289995Z\"},\"id\":\"B73zGXtvAY90\",\"outputId\":\"6a5f9d61-bc87-48a0-b2be-18170a4bf6f1\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nplt.figure(figsize=(18, 6))\nax = sn.countplot(x=y_train_resampled, color='teal')\n\nfor p in ax.patches:\n    ax.annotate(f'{p.get_height()}', (p.get_x() + p.get_width() / 2., p.get_height()),\n                ha='center', va='bottom', fontsize=9, color='black')\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.291747Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.292568Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.292326Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.292302Z\"},\"id\":\"lzWRDpBUAaT9\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# accuracy with all the features\n#svm\nstart_time = time.time()\naccuracy = svm_classifier(X_train_resampled, y_train_resampled, X_val, y_val['label_4'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.294019Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.294879Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.294591Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.294567Z\"},\"id\":\"IhXrcfyDAncr\",\"outputId\":\"aa1cb504-1b50-433b-e970-5de2c3b3651c\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# accuracy with all the features\n#knn\nstart_time = time.time()\naccuracy = knn_classifier(X_train_resampled, y_train_resampled, X_val, y_val['label_4'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.296315Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.297154Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.296905Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.296881Z\"},\"id\":\"_0fXjozNGXKW\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# accuracy with all the features\n#logistic_regression_classifier\nstart_time = time.time()\naccuracy = logistic_regression_classifier(X_train_resampled, y_train_resampled, X_val, y_val['label_4'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.298723Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.299590Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.299328Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.299302Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nlabel_4_pred_before = svm.predict(np.array(X_test))\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.301067Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.302004Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.301741Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.301715Z\"},\"id\":\"08dwkFcGAsUx\",\"outputId\":\"5c079e12-4a60-4aa3-9931-a57a47d1f4a6\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nweekly_related_features = id_weekly_correlated_features_with_label(label_4_train, 'label_4', 0.01)\nprint(f\"dropping features count {len(set(weekly_related_features))}\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.303699Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.304516Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.304272Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.304248Z\"},\"id\":\"4iwcsxHMDwHW\",\"outputId\":\"31ea67cd-d922-451a-f301-00b8fb54efec\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train_filtered = X_train_resampled.drop(columns=list(weekly_related_features))\nX_val_filtered = X_val.drop(columns=list(weekly_related_features))\nX_test_filtered = X_test.drop(columns=list(weekly_related_features))\nstart_time = time.time()\naccuracy = svm_classifier(X_train_filtered, y_train_resampled, X_val_filtered, y_val['label_4'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.305964Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.306797Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.306549Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.306524Z\"},\"id\":\"65SbV-arD4Ak\",\"outputId\":\"3da8d149-cf21-4db5-e12d-1365b439daea\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nhighly_related_features = id_highly_correlated_features(X_train_filtered, 0.5)\nprint(f\"dropping features count {len(set(highly_related_features))}\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.308230Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.309115Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.308866Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.308841Z\"},\"id\":\"kEcQDu15D5fQ\",\"outputId\":\"89a4f9d7-c26f-49b8-de28-01a4ddaa6a2f\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train_filtered = X_train_filtered.drop(columns=list(highly_related_features))\nX_val_filtered = X_val_filtered.drop(columns=list(highly_related_features))\nX_test_filtered = X_test_filtered.drop(columns=list(highly_related_features))\nstart_time = time.time()\naccuracy = svm_classifier(X_train_filtered, y_train_resampled, X_val_filtered, y_val['label_4'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.310530Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.311341Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.311114Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.311090Z\"},\"id\":\"vw6whcTtA-7q\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nscaler = StandardScaler()\nX_train_scaled = scaler.fit_transform(X_train_filtered)\nX_val_scaled = scaler.transform(X_val_filtered)\nX_test_scaled = scaler.transform(X_test_filtered)\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.312798Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.313907Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.313642Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.313614Z\"},\"id\":\"iapkHmlyA_Wz\",\"outputId\":\"182f4aae-d809-4165-f861-6cecda7a5b1e\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train_scaled.shape\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.315314Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.316260Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.315996Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.315959Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nstart_time = time.time()\naccuracy = svm_classifier(X_train_filtered, y_train_resampled, X_val_filtered, y_val['label_4'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.317653Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.318469Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.318212Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.318187Z\"},\"id\":\"G7zj0IHBBC5B\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\npca = PCA(n_components=0.95, svd_solver = 'full')\nX_train_pca = pca.fit_transform(X_train_scaled)\nX_val_pca = pca.transform(X_val_scaled)\nX_test_pca = pca.transform(X_test_scaled)\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.319940Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.320734Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.320487Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.320463Z\"},\"id\":\"up4sEETQHPYq\",\"outputId\":\"554d9cae-fe88-44fa-d090-6bd22fb76579\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nX_train_pca.shape\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.322224Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.323062Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.322813Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.322788Z\"},\"id\":\"YHNGyc4dHRI8\",\"outputId\":\"12d5f654-edb3-4465-fa29-fcedc531a56d\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nstart_time = time.time()\naccuracy = svm_classifier(X_train_pca, y_train_resampled, X_val_pca, y_val['label_4'] )\nelapsed_time = time.time() - start_time\nprint(f\"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs\")\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.324491Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.325390Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.325160Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.325135Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# from sklearn.model_selection import GridSearchCV\n  \n# # defining parameter range\n# param_grid = {'C': [1000, 1200, 1300, 1500, 1600, 2000, 1800, 2200],\n#               'class_weight': ['balanced', None]} \n  \n# grid = GridSearchCV(SVC(), param_grid, refit = True, verbose = 3)\n  \n# # fitting the model for grid search\n# grid.fit(X_train_pca, y_train['label_2'])\n# grid.best_params_\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.326753Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.327504Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.327279Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.327253Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\ncross_val_score(SVC(class_weight='balanced', C=1000), X_train_pca, y_train['label_4'], cv=5, scoring='accuracy').mean()\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.328873Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.329707Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.329459Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.329413Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\nbest_model_label_4 = SVC(class_weight='balanced', C=1000)\n\nlabel_4_pred_after = best_model_label_4.fit(X_train_pca, y_train['label_4']).predict(X_test_pca)\n\n# %% [markdown] {\"id\":\"bB7AmZXDFLZL\",\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# Kaggle competition output\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.331014Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.331857Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.331562Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.331538Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\noutput_df = test[['ID']]\noutput_df['label_1'] = label_1_pred_after\noutput_df['label_2'] = label_2_pred_after\noutput_df['label_3'] = label_3_pred_after\noutput_df['label_4'] = label_4_pred_after\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.333572Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.334370Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.334134Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.334111Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\noutput_df.head()\n\n# %% [code] {\"execution\":{\"iopub.status.busy\":\"2023-09-23T10:43:39.335741Z\",\"iopub.status.idle\":\"2023-09-23T10:43:39.336511Z\",\"shell.execute_reply\":\"2023-09-23T10:43:39.336270Z\",\"shell.execute_reply.started\":\"2023-09-23T10:43:39.336245Z\"},\"papermill\":{\"duration\":null,\"end_time\":null,\"exception\":null,\"start_time\":null,\"status\":\"pending\"},\"tags\":[]}\n# Write DataFrame to CSV\noutput_df.to_csv('predictions_L7.csv', index=False)","metadata":{"_uuid":"74945c5e-0994-49c4-aea9-41e324bce80f","_cell_guid":"e2dcb311-532c-4737-acc0-203908c079a2","collapsed":false,"jupyter":{"outputs_hidden":false},"trusted":true},"execution_count":null,"outputs":[]}]}
+# -*- coding: utf-8 -*-
+"""l7-ml-project.ipynb
+
+Automatically generated by Colaboratory.
+
+Original file is located at
+    https://colab.research.google.com/drive/18CEkYN1hStgUwQx0EsZpdkeBO1EQlzRG
+"""
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from catboost import CatBoostClassifier
+from sklearn.model_selection import cross_val_score
+from sklearn.metrics import accuracy_score
+from sklearn.decomposition import PCA
+import seaborn as sn
+from imblearn.over_sampling import RandomOverSampler
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+import time
+import os
+
+import warnings
+warnings.filterwarnings('ignore')
+
+train = pd.read_csv('/kaggle/input/l7-data/train.csv')
+valid = pd.read_csv('/kaggle/input/l7-data/valid.csv')
+test = pd.read_csv('/kaggle/input/l7-data/test.csv')
+
+train.head()
+
+svm = SVC(kernel='linear')
+def svm_classifier(X_train, Y_train, X_val, Y_val):
+    svm.fit(X_train, Y_train)
+
+    y_pred = svm.predict(X_val)
+
+    accuracy = accuracy_score(Y_val, y_pred)
+    return accuracy
+
+knn = KNeighborsClassifier(n_neighbors=1)
+def knn_classifier(X_train, Y_train, X_val, Y_val):
+
+    knn.fit(np.array(X_train), Y_train)
+
+    y_pred = knn.predict(np.array(X_val))
+
+    accuracy = accuracy_score(Y_val, y_pred)
+    return accuracy
+
+logreg = LogisticRegression()
+def logistic_regression_classifier(X_train, Y_train, X_val, Y_val):
+
+    logreg.fit(X_train, Y_train)
+
+    y_pred = logreg.predict(X_val)
+
+    accuracy = accuracy_score(Y_val, y_pred)
+    return accuracy
+
+def id_highly_correlated_features(dataset, threshold):
+    corr_matrix = dataset.corr().abs()
+    upper_tri = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool_))
+    to_drop = [column for column in upper_tri.columns if any(upper_tri[column] > threshold)]
+    return set(to_drop)
+
+def id_weekly_correlated_features_with_label(dataset, label, threshold = 0.01):
+    for label_ in train.iloc[:, -4:]:
+        if label_ != label:
+            dataset = dataset.drop(label_, axis=1)  # remove other targets from the dataset
+    corr_matrix = dataset.corr().abs()
+    weak_corr_features = corr_matrix[corr_matrix[label] < threshold].index.tolist()
+    if label in weak_corr_features:
+        weak_corr_features.remove(label)
+    return weak_corr_features
+
+"""# **Label 1**"""
+
+label_1_train = train.copy()
+label_1_valid = valid.copy()
+label_1_test = test.copy()
+
+label_1_train = label_1_train.dropna(subset=['label_1'])
+label_1_valid = label_1_valid.dropna(subset=['label_1'])
+
+label_1_test.head()
+
+X_train = label_1_train.iloc[:, :-4]
+y_train = label_1_train.iloc[:, -4:]
+X_val = label_1_valid.iloc[:, :-4]
+y_val = label_1_valid.iloc[:, -4:]
+X_test = label_1_test.iloc[:, 1:]
+
+plt.figure(figsize=(18, 6))
+sn.countplot(data=y_train, x='label_1', palette='Set2')
+plt.title('Distribution of label_1 Classes')
+plt.xlabel('label_1')
+plt.ylabel('Count')
+plt.xticks(rotation=45)
+plt.show()
+
+# accuracy with all the features
+#svm
+start_time = time.time()
+accuracy = svm_classifier(X_train, y_train['label_1'], X_val, y_val['label_1'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+# accuracy with all the features
+#knn
+start_time = time.time()
+accuracy = knn_classifier(X_train, y_train['label_1'], X_val, y_val['label_1'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+# accuracy with all the features
+#logistic_regression_classifier
+start_time = time.time()
+accuracy = logistic_regression_classifier(X_train, y_train['label_1'], X_val, y_val['label_1'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+label_1_pred_before = svm.predict(np.array(X_test))
+
+weekly_related_features = id_weekly_correlated_features_with_label(X_train_pca, 'label_1',0.01)
+len(set(weekly_related_features))
+
+print(f"dropping weekly related features count {len(set(weekly_related_features))}")
+X_train_filtered = X_train.drop(columns=list(weekly_related_features))
+X_val_filtered = X_val.drop(columns=list(weekly_related_features))
+X_test_filtered = X_test.drop(columns=list(weekly_related_features))
+start_time = time.time()
+accuracy = svm_classifier(X_train_filtered, y_train['label_1'], X_val_filtered, y_val['label_1'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+highly_related_features = id_highly_correlated_features(X_train_filtered, 0.5)
+len(set(highly_related_features))
+
+print(f"dropping highly related features count {len(set(highly_related_features))}")
+X_train_filtered = X_train_filtered.drop(columns=list(highly_related_features))
+X_val_filtered = X_val_filtered.drop(columns=list(highly_related_features))
+X_test_filtered = X_test_filtered.drop(columns=list(highly_related_features))
+start_time = time.time()
+accuracy = svm_classifier(X_train_filtered, y_train['label_1'], X_val_filtered, y_val['label_1'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train_filtered)
+X_val_scaled = scaler.transform(X_val_filtered)
+X_test_scaled = scaler.transform(X_test_filtered)
+
+start_time = time.time()
+accuracy = svm_classifier(X_train_scaled, y_train['label_1'], X_val_scaled, y_val['label_1'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+X_train_scaled.shape
+
+pca = PCA(n_components=0.95, svd_solver = 'full')
+X_train_pca = pca.fit_transform(X_train)
+X_val_pca = pca.transform(X_val)
+X_test_pca = pca.transform(X_test)
+
+start_time = time.time()
+accuracy = svm_classifier(X_train_pca, y_train['label_1'], X_val_pca, y_val['label_1'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+X_train_pca.shape
+
+# # Hyper Parameter Tuning For SVC
+
+# from sklearn.model_selection import GridSearchCV
+
+# # defining parameter range
+# param_grid = {'C': [0.1, 1, 10, 100, 1000],
+#               'gamma': [1, 0.1, 0.01, 0.001, 0.0001],
+#               'kernel': ['rbf']}
+
+# grid = GridSearchCV(SVC(), param_grid, refit = True, verbose = 3)
+
+# # fitting the model for grid search
+# grid.fit(X_train_pca, y_train['label_1'])
+# grid.best_params_
+
+# grid.best_estimator_
+
+cross_val_score(SVC(C=1000, gamma=0.001, kernel='rbf'), X_train_pca, y_train['label_1'], cv=3).mean()
+
+best_model_label_1 = SVC(C=1000, gamma=0.001, kernel='rbf', probability=True)
+best_model_label_1.fit(X_train_pca, y_train['label_1'])
+pred = best_model_label_1.predict(X_val_pca)
+accuracy_score(y_val['label_1'], pred )
+
+label_1_pred_after = best_model_label_1.predict(np.array(X_test_pca))
+
+"""Label 2"""
+
+label_2_train = train.copy()
+label_2_valid = valid.copy()
+label_2_test = test.copy()
+label_2_test.head()
+
+label_2_train = label_2_train.dropna(subset=['label_2'])
+label_2_valid = label_2_valid.dropna(subset=['label_2'])
+
+X_train = label_2_train.iloc[:, :-4]
+y_train = label_2_train.iloc[:, -3:]
+X_val = label_2_valid.iloc[:, :-4]
+y_val = label_2_valid.iloc[:, -3:]
+X_test = label_2_test.iloc[:, 1:]
+
+X_test.head()
+
+plt.figure(figsize=(18, 6))
+sn.histplot(data=y_train, x='label_2', bins=20, kde=False)
+
+# accuracy with all the features
+#svm
+start_time = time.time()
+accuracy = svm_classifier(X_train, y_train['label_2'], X_val, y_val['label_2'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+# accuracy with all the features
+#knn
+start_time = time.time()
+accuracy = knn_classifier(X_train, y_train['label_2'], X_val, y_val['label_2'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+# accuracy with all the features
+#logistic_regression_classifier
+start_time = time.time()
+accuracy = logistic_regression_classifier(X_train, y_train['label_2'], X_val, y_val['label_2'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+label_2_pred_before = svm.predict(np.array(X_test))
+
+weekly_related_features = id_weekly_correlated_features_with_label(label_2_train, 'label_2')
+print(f"dropping features count {len(set(weekly_related_features))}")
+
+X_train_filtered = X_train.drop(columns=list(weekly_related_features))
+X_val_filtered = X_val.drop(columns=list(weekly_related_features))
+X_test_filtered = X_test.drop(columns=list(weekly_related_features))
+start_time = time.time()
+accuracy = svm_classifier(X_train_filtered, y_train['label_2'], X_val_filtered, y_val['label_2'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+highly_related_features = id_highly_correlated_features(X_train_filtered, 0.5)
+print(f"dropping features count {len(set(highly_related_features))}")
+
+X_train_filtered = X_train_filtered.drop(columns=list(highly_related_features))
+X_val_filtered = X_val_filtered.drop(columns=list(highly_related_features))
+X_test_filtered = X_test_filtered.drop(columns=list(highly_related_features))
+start_time = time.time()
+accuracy = svm_classifier(X_train_filtered, y_train['label_2'], X_val_filtered, y_val['label_2'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train_filtered)
+X_val_scaled = scaler.transform(X_val_filtered)
+X_test_scaled = scaler.transform(X_test_filtered)
+
+start_time = time.time()
+accuracy = svm_classifier(X_train_scaled, y_train['label_2'], X_val_scaled, y_val['label_2'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+X_train_scaled.shape
+
+pca = PCA(n_components=0.95, svd_solver = 'full')
+X_train_pca = pca.fit_transform(X_train_scaled)
+X_val_pca = pca.transform(X_val_scaled)
+X_test_pca = pca.transform(X_test_scaled)
+
+start_time = time.time()
+accuracy = svm_classifier(X_train_pca, y_train['label_2'], X_val_pca, y_val['label_2'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+X_train_pca.shape
+
+X_test_pca.shape
+
+# from sklearn.model_selection import GridSearchCV
+
+# # defining parameter range
+# param_grid = {'C': [1000, 1200, 1300, 1500, 1600, 2000, 1800, 2200],
+#               'kernel': ['rbf']}
+
+# grid = GridSearchCV(SVC(), param_grid, refit = True, verbose = 3)
+
+# # fitting the model for grid search
+# grid.fit(X_train_pca, y_train['label_2'])
+# grid.best_params_
+
+cross_val_score(SVC(C=1000, kernel='rbf'), X_train_pca, y_train['label_2'], cv=5).mean()
+
+best_model_label_2 = SVC(C=1000, kernel='rbf')
+best_model_label_2.fit(X_train_pca, y_train['label_2'])
+pred = best_model_label_2.predict(X_val_pca)
+accuracy_score(y_val['label_2'], pred )
+
+label_2_pred_after = best_model_label_2.predict(np.array(X_test_pca))
+
+"""Label 3"""
+
+label_3_train = train.copy()
+label_3_valid = valid.copy()
+label_3_test = test.copy()
+
+label_3_train = label_3_train.dropna(subset=['label_3'])
+label_3_valid = label_3_valid.dropna(subset=['label_3'])
+
+X_train = label_3_train.iloc[:, :-4]
+y_train = label_3_train.iloc[:, -2:]
+X_val = label_3_valid.iloc[:, :-4]
+y_val = label_3_valid.iloc[:, -2:]
+X_test = label_3_test.iloc[:, 1:]
+
+plt.figure(figsize=(18, 6))
+sn.histplot(data=y_train, x='label_3', bins=20, kde=False)
+
+ros = RandomOverSampler(random_state=0, sampling_strategy=0.75)
+X_train_resampled, y_train_resampled = ros.fit_resample(X_train, y_train['label_3'])
+
+y_train_resampled
+
+ax = sn.countplot(x=y_train['label_3'])
+
+for p in ax.patches:
+    ax.annotate(f'{p.get_height()}', (p.get_x() + p.get_width() / 2., p.get_height()),
+                ha='center', va='bottom', fontsize=9, color='black')
+
+# accuracy with all the features
+#svm
+start_time = time.time()
+accuracy = svm_classifier(X_train_resampled, y_train_resampled, X_val, y_val['label_3'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+# accuracy with all the features
+#knn
+start_time = time.time()
+accuracy = knn_classifier(X_train_resampled, y_train_resampled, X_val, y_val['label_3'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+# accuracy with all the features
+#logistic_regression_classifier
+start_time = time.time()
+accuracy = logistic_regression_classifier(X_train_resampled, y_train_resampled, X_val, y_val['label_3'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+label_3_pred_before = svm.predict(np.array(X_test))
+
+weekly_related_features = id_weekly_correlated_features_with_label(label_3_train, 'label_3',0.03)
+print(f"dropping features count {len(set(weekly_related_features))}")
+
+X_train_filtered = X_train_resampled.drop(columns=list(weekly_related_features))
+X_val_filtered = X_val.drop(columns=list(weekly_related_features))
+X_test_filtered = X_test.drop(columns=list(weekly_related_features))
+start_time = time.time()
+accuracy = svm_classifier(X_train_filtered, y_train_resampled, X_val_filtered, y_val['label_3'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+highly_related_features = id_highly_correlated_features(X_train_filtered, 0.5)
+print(f"dropping features count {len(set(highly_related_features))}")
+
+X_train_filtered = X_train_filtered.drop(columns=list(highly_related_features))
+X_val_filtered = X_val_filtered.drop(columns=list(highly_related_features))
+X_test_filtered = X_test_filtered.drop(columns=list(highly_related_features))
+start_time = time.time()
+accuracy = svm_classifier(X_train_filtered, y_train_resampled, X_val_filtered, y_val['label_3'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train_filtered)
+X_val_scaled = scaler.transform(X_val_filtered)
+X_test_scaled = scaler.transform(X_test_filtered)
+
+X_train_scaled.shape
+
+start_time = time.time()
+accuracy = svm_classifier(X_train_scaled, y_train_resampled, X_val_scaled, y_val['label_3'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+pca = PCA(n_components=0.95, svd_solver = 'full')
+X_train_pca = pca.fit_transform(X_train_scaled)
+X_val_pca = pca.transform(X_val_scaled)
+X_test_pca = pca.transform(X_test_scaled)
+
+start_time = time.time()
+accuracy = svm_classifier(X_train_pca, y_train_resampled, X_val_pca, y_val['label_3'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+cross_val_score(SVC(), X_train_pca, y_train['label_3'], cv=5).mean()
+
+best_model_label_3 = SVC()
+label_3_pred_after = best_model_label_3.fit(X_train_pca, y_train['label_3']).predict(np.array(X_test_pca))
+
+"""Label 4"""
+
+label_4_train = train.copy()
+label_4_valid = valid.copy()
+label_4_test = test.copy()
+
+label_4_train = label_4_train.dropna(subset=['label_4'])
+label_4_valid = label_4_valid.dropna(subset=['label_4'])
+
+X_train = label_4_train.iloc[:, :-4]
+y_train = label_4_train.iloc[:, -1:]
+X_val = label_4_valid.iloc[:, :-4]
+y_val = label_4_valid.iloc[:, -1:]
+X_test = label_4_test.iloc[:, 1:]
+
+plt.figure(figsize=(18, 6))
+sn.histplot(data=y_train, x='label_4', bins=20, kde=False)
+
+plt.figure(figsize=(18, 6))
+ax = sn.countplot(x=y_train['label_4'], color='teal')
+
+for p in ax.patches:
+    ax.annotate(f'{p.get_height()}', (p.get_x() + p.get_width() / 2., p.get_height()),
+                ha='center', va='bottom', fontsize=9, color='black')
+
+# accuracy with all the features
+#knn
+start_time = time.time()
+accuracy = knn_classifier(X_train, y_train, X_val, y_val['label_4'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+label_4_pred_before = knn.predict(np.array(X_test))
+
+ros = RandomOverSampler(random_state=0)
+X_train_resampled, y_train_resampled = ros.fit_resample(X_train, y_train['label_4'])
+
+plt.figure(figsize=(18, 6))
+ax = sn.countplot(x=y_train_resampled, color='teal')
+
+for p in ax.patches:
+    ax.annotate(f'{p.get_height()}', (p.get_x() + p.get_width() / 2., p.get_height()),
+                ha='center', va='bottom', fontsize=9, color='black')
+
+# accuracy with all the features
+#svm
+start_time = time.time()
+accuracy = svm_classifier(X_train_resampled, y_train_resampled, X_val, y_val['label_4'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+# accuracy with all the features
+#knn
+start_time = time.time()
+accuracy = knn_classifier(X_train_resampled, y_train_resampled, X_val, y_val['label_4'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+# accuracy with all the features
+#logistic_regression_classifier
+start_time = time.time()
+accuracy = logistic_regression_classifier(X_train_resampled, y_train_resampled, X_val, y_val['label_4'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+label_4_pred_before = svm.predict(np.array(X_test))
+
+weekly_related_features = id_weekly_correlated_features_with_label(label_4_train, 'label_4', 0.01)
+print(f"dropping features count {len(set(weekly_related_features))}")
+
+X_train_filtered = X_train_resampled.drop(columns=list(weekly_related_features))
+X_val_filtered = X_val.drop(columns=list(weekly_related_features))
+X_test_filtered = X_test.drop(columns=list(weekly_related_features))
+start_time = time.time()
+accuracy = svm_classifier(X_train_filtered, y_train_resampled, X_val_filtered, y_val['label_4'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+highly_related_features = id_highly_correlated_features(X_train_filtered, 0.5)
+print(f"dropping features count {len(set(highly_related_features))}")
+
+X_train_filtered = X_train_filtered.drop(columns=list(highly_related_features))
+X_val_filtered = X_val_filtered.drop(columns=list(highly_related_features))
+X_test_filtered = X_test_filtered.drop(columns=list(highly_related_features))
+start_time = time.time()
+accuracy = svm_classifier(X_train_filtered, y_train_resampled, X_val_filtered, y_val['label_4'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train_filtered)
+X_val_scaled = scaler.transform(X_val_filtered)
+X_test_scaled = scaler.transform(X_test_filtered)
+
+X_train_scaled.shape
+
+start_time = time.time()
+accuracy = svm_classifier(X_train_filtered, y_train_resampled, X_val_filtered, y_val['label_4'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+pca = PCA(n_components=0.95, svd_solver = 'full')
+X_train_pca = pca.fit_transform(X_train_scaled)
+X_val_pca = pca.transform(X_val_scaled)
+X_test_pca = pca.transform(X_test_scaled)
+
+X_train_pca.shape
+
+start_time = time.time()
+accuracy = svm_classifier(X_train_pca, y_train_resampled, X_val_pca, y_val['label_4'] )
+elapsed_time = time.time() - start_time
+print(f"Accuracy: {accuracy * 100:.2f}% in {elapsed_time} secs")
+
+# from sklearn.model_selection import GridSearchCV
+
+# # defining parameter range
+# param_grid = {'C': [1000, 1200, 1300, 1500, 1600, 2000, 1800, 2200],
+#               'class_weight': ['balanced', None]}
+
+# grid = GridSearchCV(SVC(), param_grid, refit = True, verbose = 3)
+
+# # fitting the model for grid search
+# grid.fit(X_train_pca, y_train['label_2'])
+# grid.best_params_
+
+cross_val_score(SVC(class_weight='balanced', C=1000), X_train_pca, y_train['label_4'], cv=5, scoring='accuracy').mean()
+
+best_model_label_4 = SVC(class_weight='balanced', C=1000)
+
+label_4_pred_after = best_model_label_4.fit(X_train_pca, y_train['label_4']).predict(X_test_pca)
+
+"""Kaggle competition output"""
+
+output_df = test[['ID']]
+output_df['label_1'] = label_1_pred_after
+output_df['label_2'] = label_2_pred_after
+output_df['label_3'] = label_3_pred_after
+output_df['label_4'] = label_4_pred_after
+
+output_df.head()
+
+# Write DataFrame to CSV
+output_df.to_csv('predictions_L7.csv', index=False)
